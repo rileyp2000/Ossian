@@ -1,31 +1,52 @@
+# Importing libraries
 import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
 
 
-def get_data(filename):
-    with open(f'data/{filename}', 'r') as f:
-        t = f.read()
-    chars = tuple(t)
+def on_gpu():
+    return torch.cuda.is_available()
 
+def get_text(filenames):
+    text = ''
+    for filename in filenames:
+        with open(f'data/{filename}', 'r') as f:
+            text += f.read()
+    return text
+
+def create_dicts(text):
+    # We create two dictionaries:
+    # 1. int2char, which maps integers to characters
+    # 2. char2int, which maps characters to integers
+    chars = tuple(set(text))
     int2char = dict(enumerate(chars))
     char2int = {ch: ii for ii, ch in int2char.items()}
 
-    encoded = np.array([char2int[ch] for ch in text])
+    return chars, int2char, char2int
 
 # Defining method to encode one hot labels
 def one_hot_encode(arr, n_labels):
-    # Initialize the the encoded array
     one_hot = np.zeros((np.multiply(*arr.shape), n_labels), dtype=np.float32)
     # Fill the appropriate elements with ones
     one_hot[np.arange(one_hot.shape[0]), arr.flatten()] = 1.
     # Finally reshape it to get back to the original array
     one_hot = one_hot.reshape((*arr.shape, n_labels))
+    
     return one_hot
 
 # Defining method to make mini-batches for training
-def get_batches(arr, batch_size, seq_length):    
+def get_batches(arr, batch_size, seq_length):
+    '''Create a generator that returns batches of size
+       batch_size x seq_length from arr.
+       
+       Arguments
+       ---------
+       arr: Array you want to make batches from
+       batch_size: Batch size, the number of sequences per batch
+       seq_length: Number of encoded chars in a sequence
+    '''
+    
     batch_size_total = batch_size * seq_length
     # total number of batches we can make
     n_batches = len(arr)//batch_size_total
