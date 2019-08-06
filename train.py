@@ -152,5 +152,5 @@ def generate(net, size, prime='A', top_k=5):
 train(epochs=n_epochs,  print_every=100)
 
 # Generating new text
-t = generate(net, 1000)
+t = generate(net, 10000)
 write_file('result', filename, t)
