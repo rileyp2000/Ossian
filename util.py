@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 
 def on_gpu():
-    return torch.cuda.is_available()
+    return 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 def get_text(filenames):
     text = ''
@@ -14,6 +14,11 @@ def get_text(filenames):
         with open(f'data/{filename}', 'r') as f:
             text += f.read()
     return text
+
+def write_file(dirs, filename, text):
+    pathlib.Path(dirs).mkdir(parents=True, exist_ok=True)
+    with open(dirs + '/' + filename, 'w') as f:
+        f.write(text)
 
 def create_dicts(text):
     # We create two dictionaries:
@@ -36,17 +41,7 @@ def one_hot_encode(arr, n_labels):
     return one_hot
 
 # Defining method to make mini-batches for training
-def get_batches(arr, batch_size, seq_length):
-    '''Create a generator that returns batches of size
-       batch_size x seq_length from arr.
-       
-       Arguments
-       ---------
-       arr: Array you want to make batches from
-       batch_size: Batch size, the number of sequences per batch
-       seq_length: Number of encoded chars in a sequence
-    '''
-    
+def get_batches(arr, batch_size, seq_length):    
     batch_size_total = batch_size * seq_length
     # total number of batches we can make
     n_batches = len(arr)//batch_size_total

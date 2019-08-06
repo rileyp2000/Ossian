@@ -3,9 +3,11 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
-from util import get_text, create_dicts, on_gpu, get_batches, one_hot_encode
+from util import get_text, create_dicts, on_gpu, get_batches, one_hot_encode, write_file
 from model import RNN
 import sys
+
+device = on_gpu()
 
 # Declaring the hyperparameters
 batch_size = 128
@@ -22,22 +24,18 @@ chars, int2char, char2int = create_dicts(text)
 # Encode the text
 data = np.array([char2int[ch] for ch in text])
 
-net = RNN(chars)
+net = RNN(chars).to(device)
+opt = torch.optim.Adam(net.parameters(), lr=lr)
+criterion = nn.CrossEntropyLoss()
 
 # Declaring the train method
 def train(epochs=20, clip=5, val_frac=0.1, print_every=100):
     global data
     net.train()
     
-    opt = torch.optim.Adam(net.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss()
-    
     # create training and validation data
     val_idx = int(len(data)*(1-val_frac))
     data, val_data = data[:val_idx], data[val_idx:]
-    
-    if(on_gpu()):
-        net.cuda()
     
     counter = 0
     n_chars = len(net.chars)
@@ -53,17 +51,10 @@ def train(epochs=20, clip=5, val_frac=0.1, print_every=100):
             # One-hot encode our data and make them Torch tensors
             x = one_hot_encode(x, n_chars)
             inputs, targets = torch.from_numpy(x), torch.from_numpy(y)
-            
-            if(on_gpu()):
-                inputs, targets = inputs.cuda(), targets.cuda()
+            inputs, targets = inputs.to(device), targets.cuda(device)
 
-            # Creating new variables for the hidden state, otherwise
-            # we'd backprop through the entire training history
             h = tuple([each.data for each in h])
-
-            # zero accumulated gradients
             net.zero_grad()
-            
             # get the output from the model
             output, h = net(inputs, h)
             
@@ -121,17 +112,10 @@ with open(model_name, 'wb') as f:
     
 # Defining a method to generate the next character
 def predict(net, char, h=None, top_k=None):
-        ''' Given a character, predict the next character.
-            Returns the predicted character and the hidden state.
-        '''
-        
         # tensor inputs
         x = np.array([[net.char2int[char]]])
         x = one_hot_encode(x, len(net.chars))
-        inputs = torch.from_numpy(x)
-        
-        if(on_gpu()):
-            inputs = inputs.cuda()
+        inputs = torch.from_numpy(x).to(device)
         
         # detach hidden state from history
         h = tuple([each.data for each in h])
@@ -158,13 +142,8 @@ def predict(net, char, h=None, top_k=None):
         return net.int2char[char], h
         
 # Declaring a method to generate new text
-def generate(net, size, prime='The', top_k=None):
-        
-    if(on_gpu()):
-        net.cuda()
-    else:
-        net.cpu()
-    
+def generate(net, size, prime='A', top_k=5):
+    net.to(device)
     net.eval() # eval mode
     
     # First off, run through the prime characters
@@ -183,4 +162,5 @@ def generate(net, size, prime='The', top_k=None):
     return ''.join(chars)
     
 # Generating new text
-print(generate(net, 1000, prime='A', top_k=5))
+t = generate(net, 1000)
+write_file('result', filename, t)
