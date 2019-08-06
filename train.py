@@ -149,7 +149,7 @@ def generate(net, size, prime='A', top_k=5):
 
                       
 # train the model
-train(epochs=n_epochs,  print_every=50)
+train(epochs=n_epochs,  print_every=100)
 
 # Generating new text
 t = generate(net, 1000)
