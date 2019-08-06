@@ -12,7 +12,7 @@ device = on_gpu()
 # Declaring the hyperparameters
 batch_size = 128
 seq_length = 100
-n_epochs = 20 # start smaller if you are just testing initial behavior
+n_epochs = 100 # start smaller if you are just testing initial behavior
 lr = 1e-3
 files = sys.argv[1:] if len(sys.argv) > 1 else ['shakespeare']
 filename = '-'.join(files)
@@ -95,21 +95,7 @@ def train(epochs=20, clip=5, val_frac=0.1, print_every=100):
                       "Step: {}...".format(counter),
                       "Loss: {:.4f}...".format(loss.item()),
                       "Val Loss: {:.4f}".format(np.mean(val_losses)))
-                      
-# train the model
-train(epochs=n_epochs,  print_every=50)
-
-# Saving the model
-model_name = 'rnn_20_epoch.net'
-
-checkpoint = {'n_hidden': net.n_hidden,
-              'n_layers': net.n_layers,
-              'state_dict': net.state_dict(),
-              'tokens': net.chars}
-
-with open(model_name, 'wb') as f:
-    torch.save(checkpoint, f)
-    
+  
 # Defining a method to generate the next character
 def predict(net, char, h=None, top_k=None):
         # tensor inputs
@@ -160,7 +146,11 @@ def generate(net, size, prime='A', top_k=5):
         chars.append(char)
 
     return ''.join(chars)
-    
+
+                      
+# train the model
+train(epochs=n_epochs,  print_every=50)
+
 # Generating new text
 t = generate(net, 1000)
 write_file('result', filename, t)
